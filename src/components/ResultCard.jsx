@@ -15,6 +15,10 @@ export default function ResultCard({ result }) {
           <p><b>Glucose:</b> {result.glucose}</p>
           <p><b>BMI:</b> {result.bmi}</p>
           <p><b>Blood Pressure:</b> {result.bp}</p>
+
+          {/* ✅ ADDED */}
+          <p><b>Skin Thickness:</b> {result.skinThickness || "-"}</p>
+          <p><b>DPF:</b> {result.dpf || "-"}</p>
         </div>
 
         {/* Column 2 */}
@@ -23,6 +27,16 @@ export default function ResultCard({ result }) {
           <p><b>Heart Rate:</b> {result.heartRate}</p>
           <p><b>Insulin:</b> {result.insulin}</p>
           <p><b>Pregnancies:</b> {result.pregnancies}</p>
+
+          {/* ✅ ADDED */}
+          <p><b>Chest Pain (cp):</b> {result.cp || "-"}</p>
+          <p><b>FBS:</b> {result.fbs || "-"}</p>
+          <p><b>Rest ECG:</b> {result.restecg || "-"}</p>
+          <p><b>Exercise Angina:</b> {result.exang || "-"}</p>
+          <p><b>Oldpeak:</b> {result.oldpeak || "-"}</p>
+          <p><b>Slope:</b> {result.slope || "-"}</p>
+          <p><b>CA:</b> {result.ca || "-"}</p>
+          <p><b>Thal:</b> {result.thal || "-"}</p>
         </div>
 
       </div>
@@ -32,17 +46,23 @@ export default function ResultCard({ result }) {
 
         <div className="p-4 rounded-xl bg-red-100">
           <p className="font-semibold">Diabetes Risk</p>
-          <p className="text-xl font-bold">{result.diabetesRisk}</p>
+          <p className="text-xl font-bold">
+            {result?.diabetesRisk || "N/A"}
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-yellow-100">
           <p className="font-semibold">Heart Risk</p>
-          <p className="text-xl font-bold">{result.heartRisk}</p>
+          <p className="text-xl font-bold">
+            {result?.heartRisk || "N/A"}
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-blue-100">
           <p className="font-semibold">Hypertension</p>
-          <p className="text-xl font-bold">{result.hypertension}</p>
+          <p className="text-xl font-bold">
+            {result?.hypertension || "N/A"}
+          </p>
         </div>
 
       </div>
