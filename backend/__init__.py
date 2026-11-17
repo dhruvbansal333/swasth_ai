@@ -1,1 +1,0 @@
-# Swasth AI Backend Package
