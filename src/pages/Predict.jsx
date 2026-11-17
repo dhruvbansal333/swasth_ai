@@ -1,126 +1,79 @@
-import { useState, useEffect } from "react";
-import RiskForm from "../components/RiskForm";
-import ResultCard from "../components/ResultCard";
+import { useNavigate } from "react-router-dom";
+import { Heart, FileText, ArrowRight, Activity, ShieldCheck } from "lucide-react";
 
 export default function Predict() {
-
-  const [result, setResult] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [hasPrevious, setHasPrevious] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("patientData");
-    if (saved) setHasPrevious(true);
-  }, []);
-
-  const loadPrevious = () => {
-    const saved = JSON.parse(localStorage.getItem("patientData"));
-
-    if (!saved) return;
-
-    const age = Number(saved.age);
-    const glucose = Number(saved.glucose);
-    const bmi = Number(saved.bmi);
-    const bp = Number(saved.bp);
-    const cholesterol = Number(saved.cholesterol);
-    const heartRate = Number(saved.heartRate);
-    const insulin = Number(saved.insulin);
-    const pregnancies = Number(saved.pregnancies);
-
-    const diabetesScore =
-      glucose * 0.4 +
-      bmi * 0.3 +
-      insulin * 0.2 +
-      pregnancies * 0.1;
-
-    const diabetesRisk =
-      diabetesScore > 120 ? "High Risk" : "Low Risk";
-
-    const heartScore =
-      age * 0.2 +
-      cholesterol * 0.3 +
-      bp * 0.2 +
-      heartRate * 0.2 +
-      bmi * 0.1;
-
-    const heartRisk =
-      heartScore > 130 ? "High Risk" : "Low Risk";
-
-    const hypertension =
-      bp > 140 ? "Positive" : "Normal";
-
-    setResult({
-      ...saved,
-      diabetesRisk,
-      heartRisk,
-      hypertension
-    });
-
-    setShowForm(true);
-  };
+  const navigate = useNavigate();
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-cyan-100 to-blue-200 px-4 overflow-hidden">
-
-      {!showForm ? (
-
-        /* START SCREEN */
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-10 border border-white/40 shadow-xl text-center max-w-xl w-full">
-
-          <h1 className="text-3xl font-bold mb-6 text-blue-700">
-            Patient Risk Assessment
+    <div className="min-h-[85vh] flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl w-full bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-xl space-y-8 text-center">
+        
+        <div>
+          <div className="h-12 w-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 shadow-md shadow-blue-500/20">
+            <Heart className="h-6 w-6" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Patient Health Assessment Hub
           </h1>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
+            Choose your assessment mode to evaluate risks for Diabetes, Heart Disease, and Hypertension.
+          </p>
+        </div>
 
-          {hasPrevious && (
-            <button
-              onClick={loadPrevious}
-              className="w-full mb-4 py-3 rounded-xl text-lg font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-105 transition"
-            >
-              Continue Previous Assessment
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              localStorage.removeItem("patientData");
-              setShowForm(true);
-            }}
-            className="w-full py-3 rounded-xl text-lg font-bold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105 transition"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          
+          {/* Option A */}
+          <div
+            onClick={() => navigate("/assessment/basic")}
+            className="cursor-pointer p-6 rounded-2xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 transition group flex flex-col justify-between"
           >
-            Start New Assessment
-          </button>
+            <div>
+              <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
+                <Heart className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition">
+                Basic Assessment
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Enter your physical vitals, blood pressure, BMI, and lifestyle habits manually. Ideal if you do not have laboratory blood reports.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+              <span>Start Basic</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </div>
+          </div>
 
-        </div>
-
-      ) : (
-
-        /* FORM CONTAINER */
-        <div className="w-full max-w-5xl bg-white/80 backdrop-blur-xl rounded-3xl p-6 border border-white/40 shadow-xl">
-          <RiskForm onResult={setResult} />
-        </div>
-
-      )}
-
-      {/* RESULT POPUP */}
-      {result && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-
-          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-4xl w-full relative">
-
-            <button
-              onClick={() => setResult(null)}
-              className="absolute top-4 right-6 text-gray-500 text-2xl hover:text-black"
-            >
-              ✕
-            </button>
-
-            <ResultCard result={result} />
-
+          {/* Option B */}
+          <div
+            onClick={() => navigate("/assessment/advanced")}
+            className="cursor-pointer p-6 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 transition group flex flex-col justify-between"
+          >
+            <div>
+              <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3">
+                <FileText className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                Advanced Report
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Upload a hospital diagnostic report (PDF or scan) or enter verified Fasting Glucose, Lipid profile, and HbA1c lab readings.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+              <span>Upload Report</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </div>
           </div>
 
         </div>
-      )}
 
+        <div className="pt-2 text-xs text-slate-400 flex items-center justify-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          <span>Calibrated against Pima NIDDK, UCI Heart Failure, and Framingham cohorts.</span>
+        </div>
+
+      </div>
     </div>
   );
 }
