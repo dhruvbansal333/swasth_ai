@@ -37,8 +37,8 @@
     "recall": 0.8824,
     "specificity": 0.878,
     "f1": 0.8911,
-    "roc_auc": 0.9324,
-    "brier_score": 0.0996,
+    "roc_auc": 0.9322,
+    "brier_score": 0.0998,
     "confusion_matrix": [
       [
         72,
@@ -65,8 +65,8 @@
       "recall": 0.8824,
       "specificity": 0.878,
       "f1": 0.8911,
-      "roc_auc": 0.9324,
-      "brier_score": 0.0996
+      "roc_auc": 0.9322,
+      "brier_score": 0.0998
     },
     {
       "model": "Random Forest",
@@ -75,18 +75,18 @@
       "recall": 0.9118,
       "specificity": 0.8415,
       "f1": 0.8942,
-      "roc_auc": 0.9267,
-      "brier_score": 0.104
+      "roc_auc": 0.9265,
+      "brier_score": 0.1041
     },
     {
       "model": "XGBoost",
-      "accuracy": 0.8804,
-      "precision": 0.9,
-      "recall": 0.8824,
+      "accuracy": 0.875,
+      "precision": 0.899,
+      "recall": 0.8725,
       "specificity": 0.878,
-      "f1": 0.8911,
-      "roc_auc": 0.92,
-      "brier_score": 0.102
+      "f1": 0.8856,
+      "roc_auc": 0.9197,
+      "brier_score": 0.1025
     }
   ],
   "risk_thresholds": {

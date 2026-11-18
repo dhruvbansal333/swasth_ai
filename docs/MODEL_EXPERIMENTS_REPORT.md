@@ -45,9 +45,9 @@ All models were evaluated under strict anti-leakage constraints:
 ### Model Comparison Table
 | Algorithm | Accuracy | Precision | Recall (Sens.) | Specificity | F1-Score | ROC-AUC | Brier Score |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Logistic Regression | 0.8804 | 0.9 | 0.8824 | 0.878 | 0.8911 | 0.9324 | 0.0996 |
-| Random Forest | 0.8804 | 0.8774 | 0.9118 | 0.8415 | 0.8942 | 0.9267 | 0.104 |
-| XGBoost | 0.8804 | 0.9 | 0.8824 | 0.878 | 0.8911 | 0.92 | 0.102 |
+| Logistic Regression | 0.8804 | 0.9 | 0.8824 | 0.878 | 0.8911 | 0.9322 | 0.0998 |
+| Random Forest | 0.8804 | 0.8774 | 0.9118 | 0.8415 | 0.8942 | 0.9265 | 0.1041 |
+| XGBoost | 0.875 | 0.899 | 0.8725 | 0.878 | 0.8856 | 0.9197 | 0.1025 |
 
 ---
 
