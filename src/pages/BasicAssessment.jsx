@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import RiskBadge from "../components/RiskBadge";
 import {
@@ -12,11 +12,7 @@ import {
   ArrowLeft,
   Sparkles,
   Info,
-  ShieldCheck,
-  RotateCcw,
-  BarChart3,
-  BookOpen,
-  AlertCircle
+  ShieldCheck
 } from "lucide-react";
 
 export default function BasicAssessment() {
@@ -46,9 +42,13 @@ export default function BasicAssessment() {
     // Step 3: Cardiac & Lifestyle
     heartRate: "",
     smoker: "0",
-    cp: "none", // Chest pain
+    physicalActivity: "1",
+    cp: "ASY", // Chest pain
     exang: "0", // Exercise angina
     fbs: "0",
+
+    // Step 4: Symptoms (Optional context)
+    symptoms: []
   });
 
   // Auto-calculate BMI when height and weight are provided
@@ -64,16 +64,6 @@ export default function BasicAssessment() {
 
   const activeBMI = form.bmi || calculatedBMI;
 
-  // BMI Category interpretation
-  const bmiCategory = useMemo(() => {
-    const val = parseFloat(activeBMI);
-    if (!val) return null;
-    if (val < 18.5) return { label: "Underweight", color: "text-amber-400" };
-    if (val < 25.0) return { label: "Normal Weight", color: "text-emerald-400" };
-    if (val < 30.0) return { label: "Overweight", color: "text-amber-400" };
-    return { label: "Obese Tier", color: "text-rose-400" };
-  }, [activeBMI]);
-
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -84,20 +74,6 @@ export default function BasicAssessment() {
   const handleNext = (e) => {
     e.preventDefault();
     setError("");
-
-    // Step 1 basic validation
-    if (step === 1) {
-      if (!form.age) {
-        setError("Please enter your age.");
-        return;
-      }
-      const ageNum = parseInt(form.age);
-      if (ageNum < 1 || ageNum > 120) {
-        setError("Please enter a valid clinical age (1-120 years).");
-        return;
-      }
-    }
-
     setStep((prev) => Math.min(prev + 1, 4));
   };
 
@@ -126,11 +102,12 @@ export default function BasicAssessment() {
         glucose: form.glucose ? parseFloat(form.glucose) : undefined,
         cholesterol: form.cholesterol ? parseFloat(form.cholesterol) : undefined,
         heartRate: form.heartRate ? parseFloat(form.heartRate) : undefined,
+        thalach: form.heartRate ? parseFloat(form.heartRate) : undefined,
         pregnancies: form.gender === "Female" && form.pregnancies ? parseFloat(form.pregnancies) : 0,
         smoker: parseInt(form.smoker || 0),
-        cp: form.cp || "none",
+        cp: form.cp || "ASY",
         exang: form.exang || "0",
-        fbs: form.fbs ? parseInt(form.fbs) : undefined
+        fbs: form.fbs ? parseInt(form.fbs) : 0
       };
 
       const res = await api.predictBasic(payload);
@@ -146,279 +123,244 @@ export default function BasicAssessment() {
     }
   };
 
-  const stepsInfo = [
-    { num: 1, title: "Demographics & Body", desc: "Age, sex, height, weight, BMI" },
-    { num: 2, title: "Vitals & Metabolic", desc: "Blood pressure, glucose, lipids" },
-    { num: 3, title: "Cardiac & Lifestyle", desc: "Heart rate, smoking, symptoms" },
-    { num: 4, title: "Review & Run", desc: "Verify parameters & execute AI" },
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
         
         {/* Page Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider">
-            <Heart className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Path A: Non-Laboratory Guided Assessment</span>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">
+            <Heart className="h-3.5 w-3.5 text-blue-600" />
+            <span>Section A: Basic Clinical Assessment</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Basic Health Risk Assessment
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Patient Health Risk Wizard
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
-            Evaluate your multi-disease statistical risk profile across Diabetes, Coronary Heart Disease, and Hypertension using daily vitals and clinical anthropometry.
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto mt-1">
+            Fill in your known vitals and physical information. Fields you do not know can be left blank — the system uses population medians without forcing false zeroes.
           </p>
         </div>
 
-        {/* Step Indicator */}
+        {/* Stepper Progress Bar */}
         {!result && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {stepsInfo.map((s) => {
-                const isCurrent = step === s.num;
-                const isDone = step > s.num;
+          <div className="mb-8">
+            <div className="flex items-center justify-between max-w-xl mx-auto mb-2">
+              {["Demographics", "Vitals & Sugar", "Cardiac & Habits", "Review"].map((label, idx) => {
+                const stepNum = idx + 1;
+                const isCurrent = step === stepNum;
+                const isDone = step > stepNum;
                 return (
-                  <div
-                    key={s.num}
-                    className={`flex items-center gap-2.5 p-2 rounded-xl transition-all ${
-                      isCurrent
-                        ? "bg-slate-800 border border-cyan-500/30 text-white"
-                        : isDone
-                        ? "text-slate-300"
-                        : "text-slate-500"
-                    }`}
-                  >
+                  <div key={label} className="flex flex-col items-center">
                     <div
-                      className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         isDone
-                          ? "bg-emerald-500 text-slate-950"
+                          ? "bg-emerald-600 text-white"
                           : isCurrent
-                          ? "bg-cyan-500 text-slate-950"
-                          : "bg-slate-800 text-slate-500"
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-4 ring-blue-100"
+                          : "bg-slate-200 text-slate-600"
                       }`}
                     >
-                      {isDone ? <CheckCircle2 className="h-4 w-4" /> : s.num}
+                      {isDone ? <CheckCircle2 className="h-4 w-4" /> : stepNum}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold truncate">{s.title}</p>
-                      <p className="text-[10px] text-slate-400 hidden sm:block truncate">{s.desc}</p>
-                    </div>
+                    <span className={`text-[11px] font-medium mt-1 ${isCurrent ? "text-blue-700 font-bold" : "text-slate-400"}`}>
+                      {label}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-800 h-1.5 rounded-full mt-4 overflow-hidden">
+            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden max-w-xl mx-auto">
               <div
-                className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all duration-300"
-                style={{ width: `${(step / 4) * 100}%` }}
+                className="bg-blue-600 h-full transition-all duration-300"
+                style={{ width: `${((step - 1) / 3) * 100}%` }}
               />
             </div>
           </div>
         )}
 
-        {/* Error Banner */}
+        {/* Error banner */}
         {error && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Result Dashboard */}
+        {/* Assessment Result View */}
         {result ? (
           <div className="space-y-6 animate-fadeIn">
             
-            {/* Overall Composite Banner */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-cyan-400">
-                    <Activity className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Overall Health Composite Stratification
-                    </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-white">{result.overall.tier}</h2>
-                  </div>
+            {/* Overall Health Card */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Overall Clinical Synthesis
+                  </span>
+                  <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                    {result.overall.tier}
+                  </h2>
                 </div>
                 <RiskBadge tier={result.overall.tier} probability={result.overall.averageProbability} size="lg" />
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-700 mt-4 leading-relaxed">
                 {result.overall.summary}
               </p>
 
-              {/* Warnings / Abnormal Biomarkers */}
-              {result.overall.abnormalBiomarkers && result.overall.abnormalBiomarkers.length > 0 && (
-                <div className="pt-3 border-t border-slate-800/80 space-y-2">
-                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5" /> Clinical Reference Alerts
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {result.overall.abnormalBiomarkers.map((b, i) => (
-                      <div key={i} className="p-2.5 rounded-xl bg-slate-950/80 border border-amber-500/20 text-xs flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-white block">{b.biomarker}: {b.value}</span>
-                          <span className="text-[10px] text-slate-400">Optimal: {b.reference}</span>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                          {b.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+              {result.overall.warnings && result.overall.warnings.length > 0 && (
+                <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                  <span className="font-bold block">Input Notice / Out of Expected Range:</span>
+                  {result.overall.warnings.map((w, i) => (
+                    <li key={i} className="list-disc ml-4">{w}</li>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* 3 Disease Prediction Cards */}
+            {/* 3 Disease Scorecards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Diabetes Card */}
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type 2 Diabetes</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Diabetes Risk</span>
                     <RiskBadge tier={result.diseases.diabetes.riskTier} probability={result.diseases.diabetes.probability} />
                   </div>
-                  <div className="text-3xl font-black text-white font-mono mb-1">
+                  <div className="text-3xl font-black text-slate-900 mb-1">
                     {result.diseases.diabetes.percentage}%
                   </div>
-                  <p className="text-xs text-slate-400 mb-4">{result.diseases.diabetes.description}</p>
+                  <p className="text-xs text-slate-500 mb-4">{result.diseases.diabetes.description}</p>
 
-                  <div className="space-y-2 border-t border-slate-800/80 pt-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
-                    {result.diseases.diabetes.factors && result.diseases.diabetes.factors.length > 0 ? (
+                  {/* Factor Breakdown */}
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
+                    {result.diseases.diabetes.factors.length > 0 ? (
                       result.diseases.diabetes.factors.map((f, i) => (
-                        <div key={i} className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
-                          <span className="font-semibold text-slate-200 block">{f.factor}</span>
-                          <span className="text-slate-400 text-[10px]">{f.note}</span>
+                        <div key={i} className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px]">
+                          <span className="font-semibold text-slate-800 block">{f.factor}</span>
+                          <span className="text-slate-500 text-[10px]">{f.note}</span>
                         </div>
                       ))
                     ) : (
-                      <span className="text-xs text-slate-500 italic">Parameters within population standard baseline.</span>
+                      <span className="text-xs text-slate-400 italic">Within standard parameters.</span>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-500">
-                  Model: {result.diseases.diabetes.modelInfo || "Calibrated Random Forest"}
+                <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                  Model: Calibrated Random Forest
                 </div>
               </div>
 
               {/* Heart Card */}
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Coronary CAD</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Heart Disease</span>
                     <RiskBadge tier={result.diseases.heart.riskTier} probability={result.diseases.heart.probability} />
                   </div>
-                  <div className="text-3xl font-black text-white font-mono mb-1">
+                  <div className="text-3xl font-black text-slate-900 mb-1">
                     {result.diseases.heart.percentage}%
                   </div>
-                  <p className="text-xs text-slate-400 mb-4">{result.diseases.heart.description}</p>
+                  <p className="text-xs text-slate-500 mb-4">{result.diseases.heart.description}</p>
 
-                  <div className="space-y-2 border-t border-slate-800/80 pt-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
-                    {result.diseases.heart.factors && result.diseases.heart.factors.length > 0 ? (
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
+                    {result.diseases.heart.factors.length > 0 ? (
                       result.diseases.heart.factors.map((f, i) => (
-                        <div key={i} className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
-                          <span className="font-semibold text-slate-200 block">{f.factor}</span>
-                          <span className="text-slate-400 text-[10px]">{f.note}</span>
+                        <div key={i} className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px]">
+                          <span className="font-semibold text-slate-800 block">{f.factor}</span>
+                          <span className="text-slate-500 text-[10px]">{f.note}</span>
                         </div>
                       ))
                     ) : (
-                      <span className="text-xs text-slate-500 italic">Parameters within population standard baseline.</span>
+                      <span className="text-xs text-slate-400 italic">Within standard parameters.</span>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-500">
-                  Model: {result.diseases.heart.modelInfo || "Calibrated Logistic Regression"}
+                <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                  Model: Calibrated Logistic Regression
                 </div>
               </div>
 
               {/* Hypertension Card */}
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hypertension</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Hypertension</span>
                     <RiskBadge tier={result.diseases.hypertension.riskTier} probability={result.diseases.hypertension.probability} />
                   </div>
-                  <div className="text-3xl font-black text-white font-mono mb-1">
+                  <div className="text-3xl font-black text-slate-900 mb-1">
                     {result.diseases.hypertension.percentage}%
                   </div>
-                  <p className="text-xs text-slate-400 mb-4">{result.diseases.hypertension.description}</p>
+                  <p className="text-xs text-slate-500 mb-4">{result.diseases.hypertension.description}</p>
 
-                  <div className="space-y-2 border-t border-slate-800/80 pt-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
-                    {result.diseases.hypertension.factors && result.diseases.hypertension.factors.length > 0 ? (
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">Influencing Factors</span>
+                    {result.diseases.hypertension.factors.length > 0 ? (
                       result.diseases.hypertension.factors.map((f, i) => (
-                        <div key={i} className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
-                          <span className="font-semibold text-slate-200 block">{f.factor}</span>
-                          <span className="text-slate-400 text-[10px]">{f.note}</span>
+                        <div key={i} className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px]">
+                          <span className="font-semibold text-slate-800 block">{f.factor}</span>
+                          <span className="text-slate-500 text-[10px]">{f.note}</span>
                         </div>
                       ))
                     ) : (
-                      <span className="text-xs text-slate-500 italic">Parameters within population standard baseline.</span>
+                      <span className="text-xs text-slate-400 italic">Within standard parameters.</span>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-500">
-                  Model: {result.diseases.hypertension.modelInfo || "Framingham Calibrated Random Forest"}
+                <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                  Model: Framingham Clinical Random Forest
                 </div>
               </div>
 
             </div>
 
             {/* Action Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-3xl bg-slate-900 border border-slate-800">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200">
               <button
                 onClick={() => setResult(null)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white transition flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Modify Assessment</span>
+                Modify Assessment
               </button>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => navigate("/analytics")}
-                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition flex items-center justify-center gap-1.5"
+                  className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition"
                 >
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  <span>View Analytics</span>
+                  View Analytics
                 </button>
                 <button
                   onClick={() => navigate("/guidance")}
-                  className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-1.5"
+                  className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 transition"
                 >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>Health Companion</span>
+                  View Health Companion Plan
                 </button>
               </div>
             </div>
 
           </div>
         ) : (
-          /* Multi-Step Input Wizard */
-          <form onSubmit={step === 4 ? handleSubmit : handleNext} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
+          /* Multi-Step Input Form */
+          <form onSubmit={step === 4 ? handleSubmit : handleNext} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-lg shadow-slate-100">
             
-            {/* Step 1: Demographics & Anthropometry */}
+            {/* Step 1: Personal & Anthropometrics */}
             {step === 1 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-lg font-bold text-white">Step 1: Demographics & Physical Anthropometry</h3>
-                  <p className="text-xs text-slate-400">Baseline physiological characteristics utilized across all models.</p>
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Step 1: Demographics & Body Metrics</h3>
+                  <p className="text-xs text-slate-500">Essential baseline characteristics used by all clinical models.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Age (Years) <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Age <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -426,34 +368,32 @@ export default function BasicAssessment() {
                       min="1"
                       max="120"
                       name="age"
-                      placeholder="e.g. 35"
+                      placeholder="e.g. 45"
                       value={form.age}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Age in complete years.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Age in completed years.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Biological Sex <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Biological Sex <span className="text-rose-500">*</span>
                     </label>
                     <select
                       name="gender"
                       value={form.gender}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                     >
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                     </select>
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Used for cohort risk stratification.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Relevant for sex-specific cardiac & diabetes risk weighting.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Height (cm)
-                    </label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Height (cm)</label>
                     <input
                       type="number"
                       min="50"
@@ -462,80 +402,76 @@ export default function BasicAssessment() {
                       placeholder="e.g. 175"
                       value={form.height_cm}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Used to automatically compute BMI.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Centimeters (used to calculate BMI).</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Weight (kg)
-                    </label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Weight (kg)</label>
                     <input
                       type="number"
                       min="20"
                       max="300"
+                      step="0.1"
                       name="weight_kg"
-                      placeholder="e.g. 70"
+                      placeholder="e.g. 72.5"
                       value={form.weight_kg}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Current body mass in kilograms.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Kilograms.</span>
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-bold text-slate-300 block">Computed Body Mass Index (BMI)</span>
-                        <span className="text-[11px] text-slate-500">Normal clinical range: 18.5 – 24.9 kg/m²</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xl font-black text-cyan-400 font-mono block">
-                          {activeBMI || "--"}
-                        </span>
-                        {bmiCategory && (
-                          <span className={`text-[10px] font-bold ${bmiCategory.color}`}>
-                            {bmiCategory.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Body Mass Index (BMI) {calculatedBMI && <span className="text-blue-600 font-semibold">(Auto-calculated: {calculatedBMI})</span>}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="10"
+                      max="75"
+                      name="bmi"
+                      placeholder={calculatedBMI || "e.g. 24.5"}
+                      value={form.bmi}
+                      onChange={handleChange}
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Leave blank to use height/weight calculation.</span>
                   </div>
 
                   {form.gender === "Female" && (
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Number of Pregnancies
-                      </label>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Pregnancies (if applicable)</label>
                       <input
                         type="number"
                         min="0"
                         max="20"
                         name="pregnancies"
-                        placeholder="e.g. 0"
+                        placeholder="e.g. 1"
                         value={form.pregnancies}
                         onChange={handleChange}
-                        className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                        className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">Gestational factor utilized in Pima diabetes model.</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">Number of times pregnant (Pima diabetes feature).</span>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Step 2: Vitals & Metabolic */}
+            {/* Step 2: Vitals & Sugar */}
             {step === 2 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-lg font-bold text-white">Step 2: Vitals & Metabolic Biomarkers</h3>
-                  <p className="text-xs text-slate-400">Resting blood pressure and metabolic laboratory indices.</p>
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Step 2: Blood Pressure & Glucose</h3>
+                  <p className="text-xs text-slate-500">If you do not know a value, leave it empty. We never substitute 0 for medical vitals.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Systolic Blood Pressure (mmHg)
                     </label>
                     <input
@@ -546,13 +482,13 @@ export default function BasicAssessment() {
                       placeholder="e.g. 120"
                       value={form.bp}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Upper reading (optimal: &lt;120 mmHg).</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Upper number of your blood pressure reading (normal: &lt;120).</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Diastolic Blood Pressure (mmHg)
                     </label>
                     <input
@@ -563,13 +499,13 @@ export default function BasicAssessment() {
                       placeholder="e.g. 80"
                       value={form.diaBP}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Lower reading (optimal: &lt;80 mmHg).</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Lower number of your blood pressure reading (normal: &lt;80).</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Blood Glucose / Sugar (mg/dL)
                     </label>
                     <input
@@ -580,13 +516,13 @@ export default function BasicAssessment() {
                       placeholder="e.g. 95 (Fasting) or 130 (Random)"
                       value={form.glucose}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Fasting target: &lt;100 mg/dL | Pre-diabetic: 100-125.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Oral glucose tolerance / Fasting blood sugar level in mg/dL.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Serum Total Cholesterol (mg/dL)
                     </label>
                     <input
@@ -594,18 +530,18 @@ export default function BasicAssessment() {
                       min="80"
                       max="550"
                       name="cholesterol"
-                      placeholder="e.g. 185 (optional)"
+                      placeholder="e.g. 185 (leave blank if unknown)"
                       value={form.cholesterol}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Desirable target: &lt;200 mg/dL.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Total serum cholesterol in mg/dL (desirable: &lt;200).</span>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs flex items-center gap-2">
-                  <Info className="h-4 w-4 shrink-0 text-cyan-400" />
-                  <span>Unentered laboratory numbers are safely estimated using clinical median imputation without inserting arbitrary zeroes.</span>
+                <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/60 text-blue-800 text-xs flex items-center gap-2">
+                  <Info className="h-4 w-4 shrink-0 text-blue-600" />
+                  <span>Missing values will be safely estimated using clinical median imputation without bias.</span>
                 </div>
               </div>
             )}
@@ -613,166 +549,134 @@ export default function BasicAssessment() {
             {/* Step 3: Cardiac & Lifestyle */}
             {step === 3 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-lg font-bold text-white">Step 3: Cardiac & Lifestyle Indicators</h3>
-                  <p className="text-xs text-slate-400">Cardiovascular symptom screening and lifestyle factors.</p>
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Step 3: Cardiac & Lifestyle Indicators</h3>
+                  <p className="text-xs text-slate-500">Lifestyle factors incorporated in Framingham and UCI cardiac models.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Resting Heart Rate (BPM)
                     </label>
                     <input
                       type="number"
                       min="40"
-                      max="160"
+                      max="220"
                       name="heartRate"
                       placeholder="e.g. 72"
                       value={form.heartRate}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Resting pulse (normal: 60-100 bpm). Maximum exercise heart rate is modeled using clinical Tanaka formula.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Beats per minute at rest.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Smoking History</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Smoking Status</label>
                     <select
                       name="smoker"
                       value={form.smoker}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                     >
                       <option value="0">Non-Smoker</option>
-                      <option value="1">Current Regular Smoker</option>
+                      <option value="1">Current Smoker</option>
                     </select>
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Smoked regularly within past 12 months.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Smoked within the past 12 months.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Chest Discomfort Pattern</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Chest Pain Pattern</label>
                     <select
                       name="cp"
                       value={form.cp}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                     >
-                      <option value="none">No Chest Discomfort / Asymptomatic (Screening)</option>
-                      <option value="nap">Non-Anginal Discomfort (Fleeting / Musculoskeletal)</option>
-                      <option value="ata">Atypical Angina (Stabbing, non-exertional)</option>
-                      <option value="ta">Typical Angina (Heavy exertional pressure / tightness)</option>
-                      <option value="silent_ischemia">Known Silent Ischemia / Prior Cardiac Referral</option>
+                      <option value="ASY">No pain / Asymptomatic</option>
+                      <option value="ATA">Atypical Angina</option>
+                      <option value="NAP">Non-Anginal Discomfort</option>
+                      <option value="TA">Typical Angina (Heavy pressure)</option>
                     </select>
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">General screening users without chest pain should choose No Chest Discomfort.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">UCI Heart Failure chest pain classification.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Exercise-Induced Chest Pain</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Exercise Angina</label>
                     <select
                       name="exang"
                       value={form.exang}
                       onChange={handleChange}
-                      className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                     >
-                      <option value="0">No discomfort provoked during exertion / exercise</option>
-                      <option value="1">Yes, experiences chest tightness or dyspnea on exertion</option>
+                      <option value="0">No chest discomfort during exercise</option>
+                      <option value="1">Yes, experiences chest tightness on exertion</option>
                     </select>
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Exertional tightness indicates potential coronary insufficiency.</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Chest tightness or shortness of breath while exercising.</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Step 4: Review Screen */}
+            {/* Step 4: Review & Run Prediction */}
             {step === 4 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-lg font-bold text-white">Step 4: Clinical Review & Confirmation</h3>
-                  <p className="text-xs text-slate-400">Review entered vitals before running calibrated ML predictions.</p>
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Step 4: Review Clinical Input Summary</h3>
+                  <p className="text-xs text-slate-500">Confirm entered details before executing the calibrated prediction pipelines.</p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-3.5 text-xs">
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Age & Sex</span>
-                    <b className="text-white font-mono">{form.age || "Not entered"} yrs, {form.gender}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">BMI Index</span>
-                    <b className="text-cyan-400 font-mono">{activeBMI || "Not calculated"} kg/m²</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Blood Pressure</span>
-                    <b className="text-white font-mono">{form.bp ? `${form.bp} / ${form.diaBP || "est"} mmHg` : "Not entered"}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Blood Glucose</span>
-                    <b className="text-white font-mono">{form.glucose ? `${form.glucose} mg/dL` : "Not entered"}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Total Cholesterol</span>
-                    <b className="text-white font-mono">{form.cholesterol ? `${form.cholesterol} mg/dL` : "Not entered"}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Resting Pulse</span>
-                    <b className="text-white font-mono">{form.heartRate ? `${form.heartRate} bpm` : "Not entered"}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Smoking Status</span>
-                    <b className="text-white">{form.smoker === "1" ? "Active Smoker" : "Non-Smoker"}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Chest Pain Classification</span>
-                    <b className="text-white capitalize">{form.cp.replace("_", " ")}</b>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[11px]">Exertional Angina</span>
-                    <b className="text-white">{form.exang === "1" ? "Yes" : "No"}</b>
-                  </div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div><span className="text-slate-400 block">Age:</span> <b className="text-slate-900">{form.age || "Not specified"} years</b></div>
+                  <div><span className="text-slate-400 block">Sex:</span> <b className="text-slate-900">{form.gender}</b></div>
+                  <div><span className="text-slate-400 block">BMI:</span> <b className="text-slate-900">{activeBMI || "Not calculated"}</b></div>
+                  <div><span className="text-slate-400 block">Blood Pressure:</span> <b className="text-slate-900">{form.bp ? `${form.bp} / ${form.diaBP || "-"} mmHg` : "Not entered"}</b></div>
+                  <div><span className="text-slate-400 block">Glucose:</span> <b className="text-slate-900">{form.glucose ? `${form.glucose} mg/dL` : "Not entered"}</b></div>
+                  <div><span className="text-slate-400 block">Cholesterol:</span> <b className="text-slate-900">{form.cholesterol ? `${form.cholesterol} mg/dL` : "Not entered"}</b></div>
+                  <div><span className="text-slate-400 block">Heart Rate:</span> <b className="text-slate-900">{form.heartRate ? `${form.heartRate} bpm` : "Not entered"}</b></div>
+                  <div><span className="text-slate-400 block">Smoker:</span> <b className="text-slate-900">{form.smoker === "1" ? "Yes" : "No"}</b></div>
+                  <div><span className="text-slate-400 block">Chest Pain:</span> <b className="text-slate-900">{form.cp}</b></div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Models executing:</span>
-                  <span className="font-mono text-cyan-400 font-semibold text-[11px]">
-                    NIDDK RF + UCI Logistic Reg + Framingham RF
-                  </span>
+                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Transparent Validation: </span>
+                    Your inputs will be evaluated against all three disease models (Diabetes, Heart Disease, Hypertension). Results will clearly state which inputs were utilized and provide risk stratification with probability estimates.
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Navigation Buttons */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            {/* Form Nav Buttons */}
+            <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between">
               {step > 1 ? (
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-1.5"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Previous</span>
                 </button>
-              ) : (
-                <div />
-              )}
+              ) : <div />}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="px-7 py-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/25 transition flex items-center gap-2 disabled:opacity-50"
+                className="px-7 py-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 disabled:opacity-50 transition flex items-center gap-1.5"
               >
                 {loading ? (
-                  <>
-                    <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Executing ML Models...</span>
-                  </>
+                  <span>Evaluating Clinical Models...</span>
                 ) : step === 4 ? (
                   <>
-                    <Sparkles className="h-4 w-4 text-cyan-200" />
-                    <span>Run Calibrated Prediction</span>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Run Health Risk Assessment</span>
                   </>
                 ) : (
                   <>
-                    <span>Next Step</span>
+                    <span>Continue to Step {step + 1}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

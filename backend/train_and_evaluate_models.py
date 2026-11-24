@@ -178,10 +178,9 @@ def train_heart():
     df = pd.read_csv("backend/data/heart_failure_918.csv")
     print(f"Loaded {len(df)} records. Columns: {list(df.columns)}")
 
-    # Biological zeroes are missing measurements in UCI heart
+    # Cholesterol 0 is missing value in UCI heart
     df_clean = df.copy()
     df_clean['Cholesterol'] = df_clean['Cholesterol'].replace(0, np.nan)
-    df_clean['RestingBP'] = df_clean['RestingBP'].replace(0, np.nan)
 
     X = df_clean.drop(columns=['HeartDisease'])
     y = df_clean['HeartDisease']
